@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+</head>
+<body>
+    <canvas id="webgl" width="400" height="400"></canvas>
+</body>
+<script src="jquery-2.2.4.js"></script>
+<script src="lib/webgl-utils.js"></script>
+<script src="lib/webgl-debug.js"></script>
+<script src="lib/cuon-utils.js"></script>
+<script>
+    // WebGL需要两种着色器：顶点着色器和片元着色器
+    // 顶点着色器用来描述顶点特性（如位置、颜色等）的程序。顶点是指二维或三维空间中的一个点，比如二维或三维图形的端点或交点
+    // 片元着色器程序是进行逐片元处理过程如光照的程序，片元可以理解为图像的单元
+
+    // 顶点着色器程序
+    var VSHADER_SOURCE = `
+        void main() {
+            // 点的位置
+            // vec4的前3个参数分别代表x y z轴坐标
+            // 4个分量构成齐次坐标
+            gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+            // 点的大小
+            gl_PointSize = 10.0;
+        }
+    `;
+    // 片元着色器程序
+    var FSHADER_SOURCE = `
+        void main() {
+            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        }
+    `;
+
+    var canvas = $("#webgl");
+    var gl = getWebGLContext(canvas.get(0));
+    // 初始化着色器
+    if (!initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)) {
+        console.log("着色器初始化失败");
+    }
+    // 参数是rgba
+    gl.clearColor(0, 0, 0, 1);
+    // gl.clear()继承自OpenGL，它基于多基本缓冲区模型，清空绘图区域，实际上是在清空颜色缓冲区，传递gl.COLOR_BUFFER_BIT实参代表清空颜色缓冲区，除了颜色缓冲区，WebGL还会使用其他诸如深度缓冲区和模板缓冲区
+    // 清空颜色缓存区将导致WebGLue清空页面上的<canvas>区域
+    // 可以用位或连接从而传多个缓冲区进去，例如：gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // 绘制一个点
+    gl.drawArrays(gl.POINTS, 0, 1);
+</script>
+</html>
