@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Document</title>
+    <title>绘制点</title>
 </head>
 <body>
     <canvas id="webgl" width="400" height="400"></canvas>
@@ -13,8 +13,8 @@
 <script src="lib/cuon-utils.js"></script>
 <script>
     // WebGL需要两种着色器：顶点着色器和片元着色器
-    // 顶点着色器用来描述顶点特性（如位置、颜色等）的程序。顶点是指二维或三维空间中的一个点，比如二维或三维图形的端点或交点
-    // 片元着色器程序是进行逐片元处理过程如光照的程序，片元可以理解为图像的单元
+    // 顶点着色器用来描述顶点特性（如位置、大小等）的程序。顶点是指二维或三维空间中的一个点，比如二维或三维图形的端点或交点
+    // 片元着色器程序是进行逐片元处理过程如光照的程序，片元可以理解为图像的单元，片元着色器控制点的颜色
 
     // 顶点着色器程序
     var VSHADER_SOURCE = `
@@ -22,7 +22,9 @@
             // 点的位置
             // vec4的前3个参数分别代表x y z轴坐标
             // 4个分量构成齐次坐标
-            gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+            // 齐次坐标是四维的，但如果最后一个分量是1.0，则该坐标可以表示前三个分量为坐标值的那个点
+            // 齐次坐标(x, y, z, w)等价于三维坐标(x/w, y/w, z/w)
+            gl_Position = vec4(0.5, 0.0, 0.0, 1.0);
             // 点的大小
             gl_PointSize = 10.0;
         }
@@ -48,6 +50,13 @@
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     // 绘制一个点
+    // param1: 绘制方式，可以是gl.POINTS gl.LINES gl.LINE_STRIP gl.LINE_LOOP gl.TRIANGLES gl.TRIANGLE_STRIP gl.TRIANGLE_FAN
+    // param2: 指定从哪个顶点开始绘制（int）
+    // param3: 指定绘制需要用到多少个顶点（int）
+    // 调用drawArrays方法时，顶点着色器将被执行param3次
+    // 顶点着色器执行完成后会执行片元着色器
+
+    // WebGL不需要交换颜色缓冲区
     gl.drawArrays(gl.POINTS, 0, 1);
 </script>
 </html>

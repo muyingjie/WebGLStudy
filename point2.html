@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Js和着色器程序之间数据传递</title>
+</head>
+<body>
+    <canvas id="webgl" width="400" height="400"></canvas>    
+</body>
+<script src="jquery-2.2.4.js"></script>
+<script src="lib/webgl-utils.js"></script>
+<script src="lib/webgl-debug.js"></script>
+<script src="lib/cuon-utils.js"></script>
+<script>
+    var VSHADER_SOURCE = `
+        // attribute叫做存储限定符，vec4是类型，attribute变量必须声明成全局变量
+        // 格式：存储限定符 类型 变量名
+        // 变量名不能以gl_或webgl_作为前缀
+        // a_Position接受4个分量，如果第4个分量没传，默认为1.0
+        attribute vec4 a_Position;
+        attribute float a_PointSize;
+
+        void main() {
+            gl_Position = a_Position;
+            gl_PointSize = a_PointSize;
+        }
+    `;
+    var FSHADER_SOURCE = `
+        void main() {
+            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        }
+    `;
+
+    var $canvas = $("#webgl");
+    var gl = getWebGLContext($canvas.get(0));
+    // 初始化着色器
+    if (!initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)) {
+        console.log("着色器初始化失败");
+    }
+
+    // 获取attribute变量存储位置
+    // gl.program是着色器程序对象
+    // 只能在着色器初始化之后才可以访问gl.program
+    var a_Position = gl.getAttribLocation(gl.program, "a_Position");
+    var a_PointSize = gl.getAttribLocation(gl.program, "a_PointSize");
+
+    if (a_Position < 0 || a_PointSize < 0) {
+        console.log("获取attribute变量存储位置失败");
+    }
+
+    // 将顶点位置传输给attribute变量
+    // vertexAttrib3f这个方法中的3代表传递3个分量，最后的f代表每个分量是浮点型（float）
+    // 如果函数名后面跟着一个v，表示函数也可以接收数组作为参数，例如：
+    // var positions = new Float32Array([1.0, 2.0, 3.0, 1.0]);
+    // gl.vertexAttrib4fv(a_Position, positions);
+    // 同理还有
+    // gl.vertexAttrib1f(a_Position, 0.0);
+    // gl.vertexAttrib2f(a_Position, 0.0, 0.0);
+    // gl.vertexAttrib3f(a_Position, 0.0, 0.0, 0.0);
+    // gl.vertexAttrib4f(a_Position, 0.0, 0.0, 0.0, 1.0);
+
+    var g_points = [];
+    $canvas.on("mousedown", function(ev) {
+        var x = ev.clientX;
+        var y = ev.clientY;
+        var rect = ev.target.getBoundingClientRect();
+
+        x = ((x - rect.left) - $canvas.height() / 2) / ($canvas.height() / 2);
+        y = ($canvas.width() / 2 - (y - rect.top)) / ($canvas.width() / 2);
+        g_points.push([x, y]);
+
+        // 由于每次绘制之前颜色缓冲区会被清空，因此必须在每次绘制之前手动设置一下颜色，否则canvas的背景就变成默认的(0, 0, 0, 0)，即透明色
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        
+        // 每次循环遍历重绘一次的原因：WebGL系统中的绘制实际上是在颜色缓冲区中进行绘制的，绘制结束后系统将缓冲区中的内容显示在屏幕上，然后颜色缓冲区会被重置，其中的内容会丢失
+        $.each(g_points, function(i, p) {
+            gl.vertexAttrib3f(a_Position, p[0], p[1], 0.0);
+            gl.vertexAttrib1f(a_PointSize, 5.0);
+
+            gl.drawArrays(gl.POINTS, 0, 1);
+        });
+    });
+    // gl.vertexAttrib3f(a_Position, 0.0, 0.0, 0.0);
+    // gl.vertexAttrib1f(a_PointSize, 5.0);
+
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // gl.drawArrays(gl.POINTS, 0, 1);
+</script>
+</html>
