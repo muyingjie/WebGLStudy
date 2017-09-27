@@ -17,6 +17,7 @@
         // 格式：存储限定符 类型 变量名
         // 变量名不能以gl_或webgl_作为前缀
         // a_Position接受4个分量，如果第4个分量没传，默认为1.0
+        // 只有顶点着色器才能使用attribute变量
         attribute vec4 a_Position;
         attribute float a_PointSize;
 
@@ -26,8 +27,13 @@
         }
     `;
     var FSHADER_SOURCE = `
+        // precision mediump float是使用精度限定词来指定变量的范围和精度，后期详细讨论
+        precision mediump float;
+        // 片元着色器中必须使用uniform变量或varying变量
+        uniform vec4 u_FragColor;
+
         void main() {
-            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+            gl_FragColor = u_FragColor;
         }
     `;
 
@@ -43,9 +49,13 @@
     // 只能在着色器初始化之后才可以访问gl.program
     var a_Position = gl.getAttribLocation(gl.program, "a_Position");
     var a_PointSize = gl.getAttribLocation(gl.program, "a_PointSize");
-
     if (a_Position < 0 || a_PointSize < 0) {
         console.log("获取attribute变量存储位置失败");
+    }
+
+    var u_FragColor = gl.getUniformLocation(gl.program, "u_FragColor");
+    if (u_FragColor == null) {
+        console.log("获取uniform变量存储位置失败");
     }
 
     // 将顶点位置传输给attribute变量
@@ -59,7 +69,10 @@
     // gl.vertexAttrib3f(a_Position, 0.0, 0.0, 0.0);
     // gl.vertexAttrib4f(a_Position, 0.0, 0.0, 0.0, 1.0);
 
+    // uniform系列也有同族函数uniform[1234]f
+
     var g_points = [];
+    var g_colors = [];
     $canvas.on("mousedown", function(ev) {
         var x = ev.clientX;
         var y = ev.clientY;
@@ -69,6 +82,14 @@
         y = ($canvas.width() / 2 - (y - rect.top)) / ($canvas.width() / 2);
         g_points.push([x, y]);
 
+        if (x >= 0 && y >= 0) {
+            g_colors.push([1.0, 0.0, 0.0, 1.0]);
+        } else if (x < 0 && y <= 0) {
+            g_colors.push([0.0, 1.0, 0.0, 1.0]);
+        } else {
+            g_colors.push([1.0, 1.0, 1.0, 1.0]);
+        }
+
         // 由于每次绘制之前颜色缓冲区会被清空，因此必须在每次绘制之前手动设置一下颜色，否则canvas的背景就变成默认的(0, 0, 0, 0)，即透明色
         gl.clear(gl.COLOR_BUFFER_BIT);
         
@@ -76,6 +97,8 @@
         $.each(g_points, function(i, p) {
             gl.vertexAttrib3f(a_Position, p[0], p[1], 0.0);
             gl.vertexAttrib1f(a_PointSize, 5.0);
+
+            gl.uniform4f(u_FragColor, g_colors[i][0], g_colors[i][1], g_colors[i][2], g_colors[i][3]);
 
             gl.drawArrays(gl.POINTS, 0, 1);
         });
