@@ -5,6 +5,91 @@
     <title>变换</title>
 </head>
 <body>
-    
+    <canvas id="webgl" width="400" height="400"></canvas>
 </body>
+<script src="jquery-2.2.4.js"></script>
+<script src="lib/webgl-utils.js"></script>
+<script src="lib/webgl-debug.js"></script>
+<script src="lib/cuon-utils.js"></script>
+<script src="lib/cuon-matrix.js"></script>
+<script>
+    // param1：uniform变量的存储位置
+    // param2：是否对矩阵转置，必须设为false，设为true时有可能崩溃
+    // gl.uniformMatrix4fv(u_xformMatrix, false, xformMatrix)
+
+    var VSHADER_SOURCE = `
+        attribute vec4 a_Position;
+        uniform mat4 u_ModelMatrix;
+        void main() {
+            gl_Position = u_ModelMatrix * a_Position;
+        }
+    `;
+
+    var FSHADER_SOURCE = `
+        void main() {
+            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        }
+    `;
+
+    var $canvas = $("#webgl");
+    var gl = getWebGLContext($canvas.get(0));
+    var ANGLE_STEP = 45.0;
+
+    if (!initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)) {
+        console.log("着色器初始化失败");
+    }
+
+    var n = initVertexBuffers(gl);
+    if (n < 0) {
+        console.log("设置顶点位置失败");
+    }
+
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+    var u_ModelMatrix = gl.getUniformLocation(gl.program, "u_ModelMatrix");
+    var currentAngle = 0.0;
+    var modelMatrix = new Matrix4();
+    var tick = function() {
+        currentAngle = animate(currentAngle);
+        draw(gl, n, currentAngle, modelMatrix, u_ModelMatrix);
+        requestAnimationFrame(tick);
+    };
+    var g_last = Date.now();
+    tick();
+
+    function initVertexBuffers(gl) {
+        var vertices = new Float32Array([0.0, 0.5, -0.5, -0.5, 0.5, -0.5]);
+        var n = 3;
+        var vertexBuffer = gl.createBuffer();
+        if (!vertexBuffer) {
+            console.log("创建缓存对象失败");
+            return -1;
+        }
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+        var a_Position = gl.getAttribLocation(gl.program, "a_Position");
+        gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(a_Position);
+
+        return n;
+    }
+
+    function draw(gl, n, currentAngle, modelMatrix, u_ModelMatrix) {
+        modelMatrix.setRotate(currentAngle, 0, 0, 1);
+        modelMatrix.translate(0.35, 0, 0);
+        gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, n);
+    }
+
+    function animate(angle) {
+        var now = Date.now();
+        var elapsed = now - g_last;
+        g_last = now;
+        var newAngle = angle + (ANGLE_STEP * elapsed) / 1000.0;
+        return newAngle %= 360;
+    }
+</script>
 </html>
